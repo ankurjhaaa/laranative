@@ -1,0 +1,74 @@
+{
+    "name": "tymiqly/lara-native",
+    "description": "Package and distribute existing Laravel applications as native/offline-first applications for Android, iOS, Windows, macOS, and Linux.",
+    "keywords": [
+        "laravel",
+        "native",
+        "offline",
+        "android",
+        "ios",
+        "windows",
+        "macos",
+        "linux",
+        "webview",
+        "sqlite",
+        "mobile",
+        "desktop",
+        "packaging"
+    ],
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Tymiqly",
+            "email": "dev@tymiqly.com"
+        }
+    ],
+    "homepage": "https://github.com/tymiqly/lara-native",
+    "support": {
+        "issues": "https://github.com/tymiqly/lara-native/issues",
+        "source": "https://github.com/tymiqly/lara-native"
+    },
+    "require": {
+        "php": "^8.1",
+        "illuminate/console": "^10.0|^11.0|^12.0",
+        "illuminate/contracts": "^10.0|^11.0|^12.0",
+        "illuminate/database": "^10.0|^11.0|^12.0",
+        "illuminate/filesystem": "^10.0|^11.0|^12.0",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "ext-pdo_sqlite": "*",
+        "ext-sqlite3": "*",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "phpunit/phpunit": "^10.0|^11.0",
+        "mockery/mockery": "^1.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "Tymiqly\\LaraNative\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tymiqly\\LaraNative\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Tymiqly\\LaraNative\\LaraNativeServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage"
+    }
+}
