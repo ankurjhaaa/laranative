@@ -23,6 +23,12 @@ class CopyApplicationStep extends BuildStep
         $sourcePath = $context->laravelPath();
         $targetPath = $context->buildPath() . DIRECTORY_SEPARATOR . 'app';
         $excludePatterns = $context->config('build.exclude', []);
+        
+        // Always exclude the build directory to prevent infinite recursion
+        if (!in_array('.laranative', $excludePatterns)) {
+            $excludePatterns[] = '.laranative';
+        }
+        $excludePatterns[] = '.laranative/*';
 
         $count = $this->copyDirectory($sourcePath, $targetPath, $excludePatterns);
 

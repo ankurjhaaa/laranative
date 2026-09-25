@@ -26,7 +26,7 @@ class DatabasePathResolver
     public function resolve(?string $platform = null): string
     {
         $platform = $platform ?? $this->detector->detectOS();
-        $filename = config('laranative.database.filename', 'laranative.sqlite');
+        $filename = config('laranative.database.filename', 'database.sqlite');
 
         $baseDir = $this->resolveBaseDirectory($platform);
 
@@ -55,7 +55,7 @@ class DatabasePathResolver
      */
     public function resolveForDev(): string
     {
-        $filename = config('laranative.database.filename', 'laranative.sqlite');
+        $filename = config('laranative.database.filename', 'database.sqlite');
 
         return database_path($filename);
     }

@@ -7,6 +7,7 @@ namespace Tymiqly\LaraNative\Platforms\Windows;
 use Tymiqly\LaraNative\Build\BuildResult;
 use Tymiqly\LaraNative\Contracts\BuildContextInterface;
 use Tymiqly\LaraNative\Contracts\BuildResultInterface;
+use Tymiqly\LaraNative\Environment\EnvironmentDetector;
 use Tymiqly\LaraNative\Platforms\AbstractPlatformBuilder;
 
 /**
@@ -17,6 +18,13 @@ use Tymiqly\LaraNative\Platforms\AbstractPlatformBuilder;
  */
 class WindowsBuilder extends AbstractPlatformBuilder
 {
+    public function __construct(
+        EnvironmentDetector $detector,
+        protected WindowsProjectGenerator $projectGenerator,
+    ) {
+        parent::__construct($detector);
+    }
+
     public function platform(): string
     {
         return 'windows';
@@ -40,16 +48,32 @@ class WindowsBuilder extends AbstractPlatformBuilder
     public function checkAvailability(): array
     {
         $isWindows = $this->detector->isWindows();
+        $dotnet = $this->detector->detectTool('dotnet');
+
+        $available = $isWindows && $dotnet['installed'];
+        
+        $reason = null;
+        $requirements = [];
+
+        if (!$isWindows) {
+            $reason = 'Windows builds require a Windows host.';
+            $requirements['os'] = 'Windows 10+ required';
+        } elseif (!$dotnet['installed']) {
+            $reason = '.NET SDK is not installed.';
+            $requirements['dotnet'] = 'Install .NET SDK 8.0+ from https://dotnet.microsoft.com/download';
+        }
 
         return [
-            'available' => $isWindows,
-            'reason' => $isWindows ? null : 'Windows builds require a Windows host.',
-            'requirements' => $isWindows ? [] : ['os' => 'Windows 10+ required'],
+            'available' => $available,
+            'reason' => $reason,
+            'requirements' => $requirements,
         ];
     }
 
     public function validatePrerequisites(): array
     {
+        $dotnet = $this->detector->detectTool('dotnet');
+        
         return [
             [
                 'check' => 'Windows Host',
@@ -58,19 +82,81 @@ class WindowsBuilder extends AbstractPlatformBuilder
                     ? 'Running on Windows'
                     : 'Windows host required for Windows builds',
             ],
+            [
+                'check' => '.NET SDK',
+                'passed' => $dotnet['installed'],
+                'message' => $dotnet['installed']
+                    ? ".NET SDK found: {$dotnet['version']}"
+                    : '.NET SDK not found. Install .NET SDK 8.0+.',
+            ],
         ];
     }
 
     public function generateProject(BuildContextInterface $context): bool
     {
-        // Windows project generation will be implemented in Phase 2
-        return false;
+        return $this->projectGenerator->generate($context);
     }
 
     public function build(BuildContextInterface $context): BuildResultInterface
     {
-        return BuildResult::failure(
-            'Windows build is not yet implemented. This platform is planned for Phase 2.'
+        $startTime = microtime(true);
+        $projectPath = $context->buildPath() . DIRECTORY_SEPARATOR . 'windows-project';
+
+        if (! is_dir($projectPath)) {
+            return BuildResult::failure(
+                'Windows project not found. Run generateProject() first.',
+                microtime(true) - $startTime,
+            );
+        }
+
+        $configuration = $context->isRelease() ? 'Release' : 'Debug';
+        
+        // Build the project using dotnet publish
+        $command = "dotnet publish -c {$configuration} -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishReadyToRun=true";
+
+        $result = $this->exec($command, $projectPath);
+
+        if ($result['exit_code'] !== 0) {
+            return BuildResult::failure(
+                "Dotnet build failed (exit code {$result['exit_code']}): {$result['output']}",
+                microtime(true) - $startTime,
+            );
+        }
+
+        $exePath = $projectPath . "\\bin\\{$configuration}\\net8.0-windows\\win-x64\\publish\\LaraNativeApp.exe";
+
+        if (! file_exists($exePath)) {
+            return BuildResult::failure(
+                'Build completed but EXE was not found in expected output directory.',
+                microtime(true) - $startTime,
+            );
+        }
+
+        // Copy to output directory
+        $outputDir = $context->outputPath();
+
+        if (! is_dir($outputDir)) {
+            mkdir($outputDir, 0755, true);
+        }
+
+        $appName = preg_replace('/[^a-zA-Z0-9_\-]/', '', $context->appName()) ?: 'app';
+        $suffix = $context->isRelease() ? '-release' : '-debug';
+        $outputFile = $outputDir . DIRECTORY_SEPARATOR . $appName . $suffix . '.exe';
+
+        copy($exePath, $outputFile);
+
+        // Copy laravel app directory alongside the EXE so it can be run
+        $laravelSource = $projectPath . DIRECTORY_SEPARATOR . 'laravel';
+        $laravelDest = $outputDir . DIRECTORY_SEPARATOR . 'laravel';
+        
+        if (is_dir($laravelSource)) {
+            $this->copyDir($laravelSource, $laravelDest);
+        }
+
+        return BuildResult::success(
+            artifactPath: $outputFile,
+            message: "Windows EXE built successfully",
+            duration: microtime(true) - $startTime,
         );
     }
 }

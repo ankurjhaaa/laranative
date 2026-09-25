@@ -47,6 +47,7 @@ class EnvironmentDetector
             'git' => $this->detectTool('git'),
             'android_sdk' => $this->detectAndroidSdk(),
             'java' => $this->detectJava(),
+            'dotnet' => $this->detectTool('dotnet'),
             'gradle' => $this->detectTool('gradle'),
             'xcode' => $this->detectXcode(),
             'hostname' => gethostname() ?: 'unknown',
@@ -213,6 +214,7 @@ class EnvironmentDetector
             'npx' => 'npx --version 2>&1',
             'git' => 'git --version 2>&1',
             'gradle' => 'gradle --version 2>&1',
+            'dotnet' => 'dotnet --version 2>&1',
             'java' => 'java -version 2>&1',
             default => null,
         };

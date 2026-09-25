@@ -597,7 +597,7 @@ class PhpServer(
             val env = arrayOf(
                 "APP_ENV=production",
                 "DB_CONNECTION=sqlite",
-                "DB_DATABASE=\${laravelDir.absolutePath}/database/laranative.sqlite"
+                "DB_DATABASE=\${laravelDir.absolutePath}/database/{$context->config('database.filename', 'database.sqlite')}"
             )
 
             process = Runtime.getRuntime().exec(cmd, env, laravelDir)

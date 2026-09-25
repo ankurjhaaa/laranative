@@ -9,6 +9,7 @@ use Tymiqly\LaraNative\Contracts\PlatformBuilderInterface;
 use Tymiqly\LaraNative\Contracts\BuildResultInterface;
 use Tymiqly\LaraNative\Build\BuildResult;
 use Tymiqly\LaraNative\Environment\EnvironmentDetector;
+use Symfony\Component\Process\Process;
 
 /**
  * Base class for platform builders with shared functionality.
@@ -44,31 +45,24 @@ abstract class AbstractPlatformBuilder implements PlatformBuilderInterface
      */
     protected function exec(string $command, ?string $cwd = null): array
     {
-        $descriptorspec = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-
-        $process = proc_open($command, $descriptorspec, $pipes, $cwd);
-
-        if (! is_resource($process)) {
-            return ['exit_code' => 1, 'output' => 'Failed to execute command'];
-        }
-
-        fclose($pipes[0]);
-
-        $stdout = stream_get_contents($pipes[1]) ?: '';
-        $stderr = stream_get_contents($pipes[2]) ?: '';
-
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-
-        $exitCode = proc_close($process);
+        $process = Process::fromShellCommandline($command, $cwd);
+        $process->setTimeout(null);
+        
+        $output = '';
+        
+        // Add a line break before streaming output
+        echo PHP_EOL;
+        
+        $process->run(function ($type, $buffer) use (&$output) {
+            $output .= $buffer;
+            echo $buffer; // Stream to console in real-time
+        });
+        
+        echo PHP_EOL;
 
         return [
-            'exit_code' => $exitCode,
-            'output' => trim($stdout . "\n" . $stderr),
+            'exit_code' => $process->getExitCode(),
+            'output' => trim($output),
         ];
     }
 

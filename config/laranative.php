@@ -122,7 +122,7 @@ return [
 
     'database' => [
         'connection' => 'sqlite',
-        'filename' => 'laranative.sqlite',
+        'filename' => 'database.sqlite',
         'auto_migrate' => true,
         'wal_mode' => true,
     ],

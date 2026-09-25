@@ -27,6 +27,7 @@ use Tymiqly\LaraNative\Platforms\Linux\LinuxBuilder;
 use Tymiqly\LaraNative\Platforms\MacOS\MacOSBuilder;
 use Tymiqly\LaraNative\Platforms\PlatformManager;
 use Tymiqly\LaraNative\Platforms\Windows\WindowsBuilder;
+use Tymiqly\LaraNative\Platforms\Windows\WindowsProjectGenerator;
 use Tymiqly\LaraNative\Runtime\RuntimeManager;
 use Tymiqly\LaraNative\Security\SecurityValidator;
 use Tymiqly\LaraNative\Storage\LaraNativeStorage;
@@ -91,7 +92,7 @@ class LaraNativeServiceProvider extends ServiceProvider
 
             // Register all platform builders
             $manager->register(new AndroidBuilder($detector, $app->make(AndroidProjectGenerator::class)));
-            $manager->register(new WindowsBuilder($detector));
+            $manager->register(new WindowsBuilder($detector, $app->make(WindowsProjectGenerator::class)));
             $manager->register(new LinuxBuilder($detector));
             $manager->register(new MacOSBuilder($detector));
             $manager->register(new IOSBuilder($detector));

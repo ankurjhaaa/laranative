@@ -28,7 +28,7 @@ class PrepareDatabaseStep extends BuildStep
             mkdir($dbDir, 0755, true);
         }
 
-        $filename = $context->config('database.filename', 'laranative.sqlite');
+        $filename = $context->config('database.filename', 'database.sqlite');
         $dbPath = $dbDir . DIRECTORY_SEPARATOR . $filename;
 
         // Create empty SQLite database

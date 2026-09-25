@@ -7,6 +7,7 @@ namespace Tymiqly\LaraNative\Commands;
 use Tymiqly\LaraNative\Build\BuildContext;
 use Tymiqly\LaraNative\Build\BuildPipeline;
 use Tymiqly\LaraNative\Build\Steps\CopyApplicationStep;
+use Tymiqly\LaraNative\Build\Steps\GenerateEnvStep;
 use Tymiqly\LaraNative\Build\Steps\PrepareDatabaseStep;
 use Tymiqly\LaraNative\Build\Steps\PrepareEnvironmentStep;
 use Tymiqly\LaraNative\Build\Steps\SecurityValidationStep;
@@ -77,17 +78,22 @@ class BuildCommand extends BaseCommand
         $availability = $builder->checkAvailability();
 
         if (! $availability['available']) {
-            $this->failure("Cannot build for {$builder->displayName()}: {$availability['reason']}");
-
-            if (! empty($availability['requirements'])) {
+            if ($this->option('skip-build')) {
+                $this->warning("Build tools are missing, but proceeding with project generation because --skip-build was used.");
                 $this->newLine();
-                $this->line('  Requirements:');
-                foreach ($availability['requirements'] as $req => $instruction) {
-                    $this->line("    {$req}: {$instruction}");
-                }
-            }
+            } else {
+                $this->failure("Cannot build for {$builder->displayName()}: {$availability['reason']}");
 
-            return self::FAILURE;
+                if (! empty($availability['requirements'])) {
+                    $this->newLine();
+                    $this->line('  Requirements:');
+                    foreach ($availability['requirements'] as $req => $instruction) {
+                        $this->line("    {$req}: {$instruction}");
+                    }
+                }
+
+                return self::FAILURE;
+            }
         }
 
         // Determine build mode
@@ -122,6 +128,7 @@ class BuildCommand extends BaseCommand
         $pipeline->addStep(new SecurityValidationStep($securityValidator));
         $pipeline->addStep(new PrepareEnvironmentStep());
         $pipeline->addStep(new CopyApplicationStep());
+        $pipeline->addStep(new GenerateEnvStep());
         $pipeline->addStep(new PrepareDatabaseStep());
 
         if ($this->option('skip-build')) {
