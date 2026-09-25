@@ -153,10 +153,48 @@ class WindowsBuilder extends AbstractPlatformBuilder
             $this->copyDir($laravelSource, $laravelDest);
         }
 
+        // Copy PHP runtime alongside the EXE
+        $phpSource = $projectPath . DIRECTORY_SEPARATOR . 'php';
+        $phpDest = $outputDir . DIRECTORY_SEPARATOR . 'php';
+        
+        if (is_dir($phpSource)) {
+            $this->copyDir($phpSource, $phpDest);
+        }
+        
+        // Zip the final package for distribution
+        $zipPath = $context->outputPath() . '.zip'; // e.g. dist/windows.zip
+        $this->createZipArchive($outputDir, $zipPath);
+
         return BuildResult::success(
-            artifactPath: $outputFile,
-            message: "Windows EXE built successfully",
+            artifactPath: $zipPath,
+            message: "Windows EXE built and packaged into portable ZIP successfully",
             duration: microtime(true) - $startTime,
         );
+    }
+    
+    protected function createZipArchive(string $sourceDir, string $zipPath): bool
+    {
+        if (class_exists('ZipArchive')) {
+            $zip = new \ZipArchive();
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
+                $files = new \RecursiveIteratorIterator(
+                    new \RecursiveDirectoryIterator($sourceDir),
+                    \RecursiveIteratorIterator::LEAVES_ONLY
+                );
+                
+                foreach ($files as $name => $file) {
+                    if (!$file->isDir()) {
+                        $filePath = $file->getRealPath();
+                        $relativePath = substr($filePath, strlen(realpath($sourceDir)) + 1);
+                        $zip->addFile($filePath, $relativePath);
+                    }
+                }
+                return $zip->close();
+            }
+        }
+        
+        // Fallback for missing ZipArchive extension (use PowerShell on Windows)
+        $this->exec("powershell Compress-Archive -Path '{$sourceDir}\\*' -DestinationPath '{$zipPath}' -Force");
+        return file_exists($zipPath);
     }
 }

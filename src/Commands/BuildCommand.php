@@ -8,6 +8,7 @@ use Tymiqly\LaraNative\Build\BuildContext;
 use Tymiqly\LaraNative\Build\BuildPipeline;
 use Tymiqly\LaraNative\Build\Steps\CopyApplicationStep;
 use Tymiqly\LaraNative\Build\Steps\GenerateEnvStep;
+use Tymiqly\LaraNative\Build\Steps\BundlePhpStep;
 use Tymiqly\LaraNative\Build\Steps\PrepareDatabaseStep;
 use Tymiqly\LaraNative\Build\Steps\PrepareEnvironmentStep;
 use Tymiqly\LaraNative\Build\Steps\SecurityValidationStep;
@@ -119,9 +120,27 @@ class BuildCommand extends BaseCommand
 
         // Build pipeline
         $pipeline = new BuildPipeline();
-        $pipeline->setOutputCallback(function (string $message) {
-            $this->line($message);
+        
+        // Count steps: user steps + generate + compile
+        $totalSteps = 8 + 2;
+        $progressBar = $this->output->createProgressBar($totalSteps);
+        $progressBar->setFormat('%current%/%max% [%bar%] %percent:3s%% -- %message%');
+        
+        $pipeline->setOutputCallback(function (string $message) use ($progressBar) {
+            $progressBar->setMessage($message);
+            $progressBar->display();
+            // Add newline so streaming output doesn't overwrite progress bar
+            if (str_contains($message, 'Building') || str_contains($message, 'complete')) {
+                $this->newLine();
+            }
         });
+        
+        $pipeline->setProgressCallback(function () use ($progressBar) {
+            $progressBar->advance();
+            $this->newLine();
+        });
+
+        $progressBar->start();
 
         $pipeline->addStep(new ValidateLaravelStep());
         $pipeline->addStep(new ValidateConfigStep());
@@ -129,6 +148,7 @@ class BuildCommand extends BaseCommand
         $pipeline->addStep(new PrepareEnvironmentStep());
         $pipeline->addStep(new CopyApplicationStep());
         $pipeline->addStep(new GenerateEnvStep());
+        $pipeline->addStep(new BundlePhpStep());
         $pipeline->addStep(new PrepareDatabaseStep());
 
         if ($this->option('skip-build')) {
@@ -152,7 +172,8 @@ class BuildCommand extends BaseCommand
         // Execute full pipeline
         $result = $pipeline->execute($context, $builder);
 
-        $this->newLine();
+        $progressBar->finish();
+        $this->newLine(2);
 
         if ($result->succeeded()) {
             $this->line('<fg=green;options=bold>Build succeeded!</>');
